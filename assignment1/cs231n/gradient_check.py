@@ -53,7 +53,8 @@ def eval_numerical_gradient_array(f, x, df, h=1e-5):
         x[ix] = oldval - h
         neg = f(x).copy()
         x[ix] = oldval
-
+        # print('Shape of pos - neg:', (pos - neg).shape)
+        # print('Number of zero terms:', np.sum((pos - neg) == 0))
         grad[ix] = np.sum((pos - neg) * df) / (2 * h)
         it.iternext()
     return grad
@@ -116,6 +117,7 @@ def grad_check_sparse(f, x, analytic_grad, num_checks=10, h=1e-5):
         ix = tuple([randrange(m) for m in x.shape])
         #ix是x中一个随机元素的下标
         oldval = x[ix]
+        
         x[ix] = oldval + h  # increment by h
         fxph = f(x)  # evaluate f(x + h)
         x[ix] = oldval - h  # increment by h

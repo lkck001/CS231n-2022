@@ -108,9 +108,23 @@ def rmsprop(w, dw, config=None):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    cache=config['decay_rate']*config['cache']+(1-config['decay_rate'])*np.square(dw)
-    config['cache']=cache
-    next_w=w-config['learning_rate']*dw/(np.sqrt(cache)+config['epsilon'])
+    # Cache update formula:
+    # cache_t = decay_rate * cache_{t-1} + (1-decay_rate) * (∇w_t)²
+    # where:
+    # - decay_rate (ρ) controls how much we forget old squared gradients (typically 0.99)
+    # - (∇w_t)² is the elementwise square of current gradient
+    cache = config['decay_rate'] * config['cache'] + (1-config['decay_rate']) * np.square(dw)
+    config['cache'] = cache
+
+    # Parameter update formula:
+    # w_{t+1} = w_t - learning_rate * ∇w_t / (√cache_t + ε)
+    # where:
+    # - learning_rate (α) is the step size
+    # - ε is small constant (1e-8) for numerical stability
+    # - √cache_t provides adaptive learning rates:
+    #   * Large cache_t (high/frequent gradients) -> smaller effective step
+    #   * Small cache_t (small/infrequent gradients) -> larger effective step
+    next_w = w - config['learning_rate'] * dw/(np.sqrt(cache) + config['epsilon'])
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -154,15 +168,33 @@ def adam(w, dw, config=None):
     # using it in any calculations.                                           #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    config['t']=config['t']+1
-    m=config['beta1']*config['m']+(1-config['beta1'])*dw
-    v=config['beta2']*config['v']+(1-config['beta2'])*np.square(dw)
-    first=m/(1-config['beta1']**config['t'])
-    second=v/(1-config['beta2']**config['t'])
-    next_w=w-config['learning_rate']*first/(np.sqrt(second)+config['epsilon'])
-    config['v']=v
-    config['m']=m
-    
+
+    # Increment timestep counter t
+    config['t'] = config['t'] + 1
+
+    # Update first moment estimate (momentum)
+    # m_t = β1*m_{t-1} + (1-β1)*∇w_t
+    m = config['beta1'] * config['m'] + (1-config['beta1']) * dw
+
+    # Update second moment estimate (RMSprop)
+    # v_t = β2*v_{t-1} + (1-β2)*(∇w_t)^2
+    v = config['beta2'] * config['v'] + (1-config['beta2']) * np.square(dw)
+
+    # Compute bias-corrected first moment estimate
+    # m̂_t = m_t / (1-β1^t)
+    first = m / (1-config['beta1']**config['t'])
+
+    # Compute bias-corrected second moment estimate
+    # v̂_t = v_t / (1-β2^t) 
+    second = v / (1-config['beta2']**config['t'])
+
+    # Update parameters:
+    # w_t = w_{t-1} - α * m̂_t / (√v̂_t + ε)
+    next_w = w - config['learning_rate'] * first/(np.sqrt(second) + config['epsilon'])
+
+    # Store states for next iteration
+    config['v'] = v
+    config['m'] = m
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################

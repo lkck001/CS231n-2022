@@ -48,6 +48,7 @@ def softmax_loss_naive(W, X, y, reg):
     dW+=W*2*reg
     loss/=N
     loss+=reg*np.sum(W*W)
+    
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss, dW
 

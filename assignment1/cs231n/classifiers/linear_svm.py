@@ -30,34 +30,34 @@ def svm_loss_naive(W, X, y, reg):
     num_classes = W.shape[1]
     num_train = X.shape[0]
     loss = 0.0
-    m=np.zeros((N,C))
-    grad_w3=np.zeros((D,C))
-    dic={}
+    m = np.zeros((N, C))
+    grad_w3 = np.zeros((D, C))
+    dic = {}
     for i in range(num_train):
-        grad_temp=np.zeros((D,C))
+        grad_temp = np.zeros((D, C))
         scores = X[i].dot(W)
         correct_class_score = scores[y[i]]
         for j in range(num_classes):
             if j == y[i]:
                 continue
             margin = scores[j] - correct_class_score + 1  # note delta = 1
-            
+
             if margin > 0:
-              dW[:,j]+=X[i].transpose()
-              dW[:,y[i]]+=-X[i].transpose()
-              grad_w3[:,j]+=X[i].transpose()
-              grad_w3[:,y[i]]+=-X[i].transpose()
-              m[i, j] = 1
-              loss += margin
-        dic[i]=grad_temp/num_train
+                dW[:, j] += X[i].transpose()
+                dW[:, y[i]] += -X[i].transpose()
+                grad_w3[:, j] += X[i].transpose()
+                grad_w3[:, y[i]] += -X[i].transpose()
+                m[i, j] = 1
+                loss += margin
+        dic[i] = grad_temp / num_train
 
     # Right now the loss is a sum over all training examples, but we want it
     # to be an average instead so we divide by num_train.
     loss /= num_train
-    dW/=num_train
+    dW /= num_train
     # Add regularization to the loss.
     loss += reg * np.sum(W * W)
-    dW+=reg*W*2
+    dW += reg * W * 2
     #############################################################################
     # TODO:                                                                     #
     # Compute the gradient of the loss function and store it dW.                #
@@ -68,12 +68,10 @@ def svm_loss_naive(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-
-
-
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     return loss, dW
+
 
 def svm_loss_vectorized(W, X, y, reg):
     """
@@ -91,17 +89,17 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    N=X.shape[0]
-    D=X.shape[1]
-    C=W.shape[1]
-    Z=X.dot(W)
-    loss=0.0
-    x_index=np.arange(0,N)
-    target_score=Z[x_index,y]
-    Z-=target_score.reshape((-1,1))
-    Z+=1
-    Z[x_index,y]=0
-    loss+=np.sum(Z*(Z>0))
+    N = X.shape[0]
+    D = X.shape[1]
+    C = W.shape[1]
+    Z = X.dot(W)
+    loss = 0.0
+    x_index = np.arange(0, N)
+    target_score = Z[x_index, y]
+    Z -= target_score.reshape((-1, 1))
+    Z += 1
+    Z[x_index, y] = 0
+    loss += np.sum(Z * (Z > 0))
     loss /= N
     loss += reg * np.sum(W * W)
 
@@ -118,16 +116,34 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    grad_L=1.0
-    grad_l1=grad_L/N
-    grad_z=np.ones((N,C))*grad_l1
-    grad_z=grad_z*(Z>0)
-    grad_z[x_index,y]=-np.sum(grad_z,axis=1)
-    X_T=X.transpose()
-    grad_w=X_T.dot(grad_z)
-    grad_l2=reg*grad_L
-    grad_w+=W*2*grad_l2
-    dW=grad_w
+    grad_L = 1.0
+    grad_l1 = grad_L / N
+    grad_z = np.ones((N, C)) * grad_l1
+    grad_z = grad_z * (Z > 0)
+    # print("grad_z.shape is ", grad_z.shape)
+    # print("grad_z[x_index, y] is ", grad_z[x_index, y])
+    # print("y[1] ", y[1])
+    # print("Z[1, :] is ", Z[1, :])
+    # print("grad_z[1, :] is ", grad_z[1, :])
+    grad_z[x_index, y] = -np.sum(grad_z, axis=1)
+    # print("grad_z[1, :] is ", grad_z[1, :])
+    # print("grad_z[2, :] is ", grad_z[2, :])
+    # print("grad_z[3, :] is ", grad_z[3, :])
+    # print("grad_z[4, :] is ", grad_z[4, :])
+    X_T = X.transpose()
+    grad_w = X_T.dot(grad_z)
+    # print("X_T.shape is ", X_T.shape)
+    # print("grad_w.shape is ", grad_w.shape)
+    # print("grad_w[1, :] is ", grad_w[1, :])
+    # print("grad_w[2, :] is ", grad_w[2, :])
+    # print("grad_w[3, :] is ", grad_w[3, :])
+    # print("grad_w[4, :] is ", grad_w[4, :]) 
+    grad_l2 = reg * grad_L
+    grad_w += W * 2 * grad_l2
+    dW = grad_w
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     return loss, dW
+
+
+
