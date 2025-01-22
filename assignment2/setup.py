@@ -13,4 +13,4 @@ setup(
     name='cs231n',
     ext_modules=cythonize(extensions),
     packages=find_packages(),
-)
+) 

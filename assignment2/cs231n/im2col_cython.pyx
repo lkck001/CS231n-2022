@@ -16,8 +16,8 @@ def im2col_cython(np.ndarray[DTYPE_t, ndim=4] x, int field_height,
     cdef int H = x.shape[2]
     cdef int W = x.shape[3]
     
-    cdef int HH = (H + 2 * padding - field_height) / stride + 1
-    cdef int WW = (W + 2 * padding - field_width) / stride + 1
+    cdef int HH = (H + 2 * padding - field_height) // stride + 1
+    cdef int WW = (W + 2 * padding - field_width) // stride + 1
 
     cdef int p = padding
     cdef np.ndarray[DTYPE_t, ndim=4] x_padded = np.pad(x,
@@ -57,8 +57,8 @@ cdef int im2col_cython_inner(np.ndarray[DTYPE_t, ndim=2] cols,
 def col2im_cython(np.ndarray[DTYPE_t, ndim=2] cols, int N, int C, int H, int W,
                   int field_height, int field_width, int padding, int stride):
     cdef np.ndarray x = np.empty((N, C, H, W), dtype=cols.dtype)
-    cdef int HH = (H + 2 * padding - field_height) / stride + 1
-    cdef int WW = (W + 2 * padding - field_width) / stride + 1
+    cdef int HH = (H + 2 * padding - field_height) // stride + 1
+    cdef int WW = (W + 2 * padding - field_width) // stride + 1
     cdef np.ndarray[DTYPE_t, ndim=4] x_padded = np.zeros((N, C, H + 2 * padding, W + 2 * padding),
                                         dtype=cols.dtype)
 
@@ -106,16 +106,68 @@ cdef col2im_6d_cython_inner(np.ndarray[DTYPE_t, ndim=6] cols,
                             x_padded[n, c, stride * h + hh, stride * w + ww] += cols[c, hh, ww, n, h, w]
     
 
-def col2im_6d_cython(np.ndarray[DTYPE_t, ndim=6] cols, int N, int C, int H, int W,
-        int HH, int WW, int pad, int stride):
-    cdef np.ndarray x = np.empty((N, C, H, W), dtype=cols.dtype)
-    cdef int out_h = (H + 2 * pad - HH) / stride + 1
-    cdef int out_w = (W + 2 * pad - WW) / stride + 1
-    cdef np.ndarray[DTYPE_t, ndim=4] x_padded = np.zeros((N, C, H + 2 * pad, W + 2 * pad),
-                                                  dtype=cols.dtype)
+def col2im_6d_cython(np.ndarray[DTYPE_t, ndim=6] cols,
+                     int N, int C, int H, int W, int HH, int WW,
+                     int padding, int stride):
+    cdef np.ndarray[DTYPE_t, ndim=4] x_padded = np.zeros((N, C, H + 2 * padding, W + 2 * padding),
+                                            dtype=cols.dtype)
+    cdef int c, ii, jj, row, yy, xx, i
+    
+    # Calculate output dimensions
+    cdef int out_h = (H + 2 * padding - HH) // stride + 1
+    cdef int out_w = (W + 2 * padding - WW) // stride + 1
+    
+    for c in range(C):
+        for ii in range(HH):
+            for jj in range(WW):
+                for yy in range(out_h):  # Changed from H to out_h
+                    for xx in range(out_w):  # Changed from W to out_w
+                        for i in range(N):
+                            x_padded[i, c, stride * yy + ii, stride * xx + jj] += \
+                                cols[c, ii, jj, i, yy, xx]
+    
+    if padding > 0:
+        return x_padded[:, :, padding:-padding, padding:-padding]
+    return x_padded
 
-    col2im_6d_cython_inner(cols, x_padded, N, C, H, W, HH, WW, out_h, out_w, pad, stride)
+def im2col_6d_cython(np.ndarray[DTYPE_t, ndim=4] x_padded,
+                     int N, int C, int H, int W, int HH, int WW,
+                     int field_height, int field_width, int padding, int stride):
+    cdef np.ndarray[DTYPE_t, ndim=2] cols = np.zeros(
+            (C * field_height * field_width, N * HH * WW),
+            dtype=x_padded.dtype)
+    
+    cdef int c, ii, jj, row, yy, xx, i
+    
+    for c in range(C):
+        for ii in range(field_height):
+            for jj in range(field_width):
+                row = c * field_height * field_width + ii * field_width + jj
+                for yy in range(HH):
+                    for xx in range(WW):
+                        for i in range(N):
+                            col_idx = i * HH * WW + yy * WW + xx
+                            ii_padded = stride * yy + ii
+                            jj_padded = stride * xx + jj
+                            cols[row, col_idx] = x_padded[i, c, ii_padded, jj_padded]
+    return cols
 
-    if pad > 0:
-        return x_padded[:, :, pad:-pad, pad:-pad]
+def col2im_6d_cython(np.ndarray[DTYPE_t, ndim=6] cols,
+                     int N, int C, int H, int W, int HH, int WW,
+                     int padding, int stride):
+    cdef np.ndarray[DTYPE_t, ndim=4] x_padded = np.zeros((N, C, H + 2 * padding, W + 2 * padding),
+                                            dtype=cols.dtype)
+    cdef int c, ii, jj, row, yy, xx, i
+    
+    for c in range(C):
+        for ii in range(HH):
+            for jj in range(WW):
+                for yy in range(H):
+                    for xx in range(W):
+                        for i in range(N):
+                            x_padded[i, c, yy + padding, xx + padding] += \
+                                cols[c, ii, jj, i, yy, xx]
+    
+    if padding > 0:
+        return x_padded[:, :, padding:-padding, padding:-padding]
     return x_padded 

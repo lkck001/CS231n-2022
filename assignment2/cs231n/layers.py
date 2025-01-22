@@ -915,14 +915,34 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     # and layer normalization!                                                #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    N, C, H, W=x.shape
-    x_=x.reshape((N*G,-1))
-    m=np.mean(x_,axis=1).reshape((-1,1))
-    v=np.var(x_,axis=1).reshape((-1,1))
-    y_=(x_-m)/np.sqrt(v+eps)
-    y=y_.reshape(x.shape)
-    out=gamma*y+beta
-    cache=(x_,gamma,beta,y,y_,eps,G)
+    N, C, H, W = x.shape    # x shape: (N, C, H, W)
+    x_ = x.reshape((N*G, -1))  # x_ shape: (N*G, C*H*W/G)
+                           # Example: if N=2, C=6, H=4, W=5, G=2
+                           # Then shape is: (4, 60)
+
+    # Compute mean for each group
+    m = np.mean(x_, axis=1).reshape((-1, 1))  # m shape: (N*G, 1)
+                                          # Example: (4, 1)
+
+    # Compute variance for each group
+    v = np.var(x_, axis=1).reshape((-1, 1))   # v shape: (N*G, 1)
+                                          # Example: (4, 1)
+
+    # Normalize each group
+    y_ = (x_ - m)/np.sqrt(v + eps)  # y_ shape: same as x_: (N*G, C*H*W/G)
+                                # Example: (4, 60)
+
+    # Reshape back to original shape
+    y = y_.reshape(x.shape)  # y shape: same as x: (N, C, H, W)
+                        # Example: (2, 6, 4, 5)
+
+    # Scale and shift
+    out = gamma*y + beta    # out shape: same as x: (N, C, H, W)
+                       # gamma and beta broadcast from shape (C,)
+                       # Example: (2, 6, 4, 5)
+
+    # Cache for backward pass
+    cache = (x_, gamma, beta, y, y_, eps, G)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
